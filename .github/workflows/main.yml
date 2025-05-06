@@ -1,41 +1,48 @@
-name: Deploy to EC2
-
+name: Deploy to EC2  
+ 
 on:
   push:
     branches:
-      - test1  # Trigger only on changes to the test1 branch
-
+      - test1
+ 
 jobs:
   deploy:
+    name: Deploy Node.js App to EC2
     runs-on: ubuntu-latest
-
+ 
     steps:
-      # Step 1: Checkout code
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v2
-
-      # Step 2: Start SSH agent and add private key
-      - name: Set up SSH Agent
-        uses: webfactory/ssh-agent@v0.5.3
-        with:
-          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
-
-      # Step 3: SSH into EC2 and run deployment commands
-      - name: Deploy app on EC2
+ 
+      - name: Set up SSH known hosts
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.USERNAME }}@${{ secrets.HOST_DNS }} << 'EOF'
-            echo "Current directory: $(pwd)"
-            cd /home/ubuntu/node-demo-/test2
-            echo "Changed directory to: $(pwd)"
-            echo "Before reset, git status:"
-            git status
-            git fetch origin test1
-            git reset --hard origin/test1
-            echo "After reset, git status:"
-            git status
+          # Ensure that the EC2 host is in known hosts to prevent SSH warning
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.HOST_DNS }} >> ~/.ssh/known_hosts
+ 
+      - name: Deploy Node.js app to EC2
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.HOST_DNS }}  # Public IP or DNS of your EC2 instance
+          username: ${{ secrets.USERNAME }}  # EC2 SSH username (e.g., ubuntu or ec2-user)
+          key: ${{ secrets.EC2_SSH_KEY }}  # SSH private key (add to GitHub secrets)
+          port: 22  # Default SSH port
+          script: |
+            # Enable debugging
+            set -x
+ 
+            # Update system packages
+            sudo apt-get update
+ 
+            # Install Node.js, npm, and git
+            sudo apt-get install -y nodejs npm git
+ 
+            # Clone the latest repo and install dependencies
+            rm -rf node-demo-
+            git clone https://github.com/prem7443/node-demo-.git
+            cd node-demo-
             npm install
+ 
+            # Run the app in the background
             pkill node || true
-            nohup npm start > output.log 2>&1 &
-            echo "Deployment completed"
-            cat output.log  # Show the contents of the output log
-          EOF
+            nohup node index.js > app.log 2>&1 &
