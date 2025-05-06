@@ -3,21 +3,29 @@ name: Deploy to EC2
 on:
   push:
     branches:
-      - test1
+      - test
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest  # Use an Ubuntu runner
 
     steps:
+      # Step 1: Checkout the code
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Set up SSH
+      # Step 2: Set up the SSH agent with your private key
+      - name: Set up SSH agent
         uses: webfactory/ssh-agent@v0.5.3
         with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}  # Using the secret for SSH private key
 
-      - name: Sync folder1 to EC2
+      # Step 3: Add the EC2 host to the known hosts to avoid SSH warnings
+      - name: Ensure EC2 is in known hosts
         run: |
-          ./sync_script.sh  # Point to your sync script here
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      # Step 4: Deploy to EC2
+      - name: Deploy to EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.USERNAME }}@${{ secrets.EC2_HOST }} "cd /path/to/your/project && git pull origin main && npm install && npm start"
