@@ -1,8 +1,9 @@
-name: Deploy Node App 
+name: Deploy Node App to EC2
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
   deploy:
@@ -22,14 +23,14 @@ jobs:
             # Add EC2 to known hosts to prevent SSH warning
             ssh-keyscan -H ${{ secrets.HOST_DNS }} >> ~/.ssh/known_hosts
 
-            # Ensure Node.js and npm are installed
+            # Update system packages and install Node.js and npm if not installed
             sudo apt-get update
             sudo apt-get install -y nodejs npm git
 
             # Clone the latest repo and install dependencies
-            rm -rf node-ec2-demo
-            https://github.com/prem7443/node-demo-.git
-            cd node-ec2-demo
+            rm -rf node-demo-
+            git clone https://github.com/prem7443/node-demo-.git
+            cd node-demo-
             npm install
 
             # Run the app in the background
