@@ -3,26 +3,30 @@ name: Deploy to EC2
 on:
   push:
     branches:
-      - test1
+      - test1  # Trigger only on changes to the test1 branch
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest  # Use an Ubuntu runner
+    runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the code
+      # Step 1: Checkout code
       - name: Checkout code
         uses: actions/checkout@v2
 
-      # Step 2: Set up the SSH agent with your private key
-      - name: Set up SSH agent
+      # Step 2: Start SSH agent and add private key
+      - name: Set up SSH Agent
         uses: webfactory/ssh-agent@v0.5.3
         with:
-          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}  # Using the secret for SSH private key
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
-      #
-
-      # Step 4: Deploy to EC2
-      - name: Deploy to EC2
+      # Step 3: SSH into EC2 and run deployment commands
+      - name: Deploy app on EC2
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.USERNAME }}@${{ secrets.EC2_HOST }} "cd /path/to/your/project && git pull origin main && npm install && npm start"
+          ssh -o StrictHostKeyChecking=no ${{ secrets.USERNAME }}@${{ secrets.HOST_DNS }} << 'EOF'
+            cd /path/to/test2  # Replace with the correct folder path on your EC2
+            git pull origin test1
+            npm install
+            pkill node || true
+            nohup npm start > output.log 2>&1 &
+          EOF
