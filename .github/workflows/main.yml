@@ -1,65 +1,23 @@
-name: Deploy Node.js App to EC2
+name: Deploy to EC2
 
 on:
   push:
     branches:
-      - main
+      - test1
 
 jobs:
   deploy:
-    name: Deploy Node.js App to EC2
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Setup SSH and deploy via SSH
-        uses: appleboy/ssh-action@v0.1.7
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.5.3
         with:
-          host: ${{ secrets.HOST_DNS }}  # Your EC2 IP or domain name
-          username: ${{ secrets.USERNAME }}  # SSH username (usually 'ubuntu' for EC2)
-          key: ${{ secrets.EC2_SSH_KEY }}  # Your private SSH key stored in GitHub Secrets
-          port: 22  # Default SSH port
-          script: |
-            # Add EC2 to known hosts to prevent SSH warnings
-            ssh-keyscan -H ${{ secrets.HOST_DNS }} >> ~/.ssh/known_hosts
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-            # Ensure Node.js and npm are installed
-            sudo apt-get update
-            sudo apt-get install -y nodejs npm git
-
-            # Clone the latest repository
-            rm -rf node-demo-  # Clear any existing directory
-            git clone https://github.com/prem7443/node-demo-.git
-
-            # Check if directory exists
-            if [ -d "node-demo-" ]; then
-              echo "Repository cloned successfully."
-            else
-              echo "Repository cloning failed. Directory does not exist."
-              exit 1
-            fi
-
-            # Navigate into the repo directory
-            cd node-demo-
-
-            # Create 3 new folders inside node-demo-
-            mkdir test1 test2 test3
-
-            # Copy all files from node-demo- into each of the three folders
-            find . -maxdepth 1 -type f -exec cp {} test1/ \;
-            find . -maxdepth 1 -type f -exec cp {} test2/ \;
-            find . -maxdepth 1 -type f -exec cp {} test3/ \;
-
-            # Optional: Verify the files in each folder
-            echo "Contents of test1:"
-            ls -la folder1
-            echo "Contents of test2:"
-            ls -la folder2
-            echo "Contents of test3:"
-            ls -la folder3
-
-             #Optional: Run the Node.js app in the background
-             pkill node || true  # Stop any existing node processes
-             nohup node index.js > app.log 2>&1 &  # Run the app in the background
+      - name: Sync folder1 to EC2
+        run: |
+          ./sync_script.sh  # Point to your sync script here
