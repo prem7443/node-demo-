@@ -1,4 +1,4 @@
-name: Deploy to EC2  
+name: Deploy Node.js App to EC2
 
 on:
   push:
@@ -14,35 +14,52 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Set up SSH known hosts
-        run: |
-          # Ensure that the EC2 host is in known hosts to prevent SSH warning
-          mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.HOST_DNS }} >> ~/.ssh/known_hosts
-
-      - name: Deploy Node.js app to EC2
+      - name: Setup SSH and deploy via SSH
         uses: appleboy/ssh-action@v0.1.7
         with:
-          host: ${{ secrets.HOST_DNS }}  # Public IP or DNS of your EC2 instance
-          username: ${{ secrets.USERNAME }}  # EC2 SSH username (e.g., ubuntu or ec2-user)
-          key: ${{ secrets.EC2_SSH_KEY }}  # SSH private key (add to GitHub secrets)
+          host: ${{ secrets.HOST_DNS }}  # Your EC2 IP or domain name
+          username: ${{ secrets.USERNAME }}  # SSH username (usually 'ubuntu' for EC2)
+          key: ${{ secrets.EC2_SSH_KEY }}  # Your private SSH key stored in GitHub Secrets
           port: 22  # Default SSH port
           script: |
-            # Enable debugging
-            set -x
+            # Add EC2 to known hosts to prevent SSH warnings
+            ssh-keyscan -H ${{ secrets.HOST_DNS }} >> ~/.ssh/known_hosts
 
-            # Update system packages
+            # Ensure Node.js and npm are installed
             sudo apt-get update
-
-            # Install Node.js, npm, and git
             sudo apt-get install -y nodejs npm git
 
-            # Clone the latest repo and install dependencies
-            rm -rf node-demo-
+            # Clone the latest repository
+            rm -rf node-demo-  # Clear any existing directory
             git clone https://github.com/prem7443/node-demo-.git
-            cd node-demo-
-            npm install
 
-            # Run the app in the background
-            pkill node || true
-            nohup node index.js > app.log 2>&1 &
+            # Check if directory exists
+            if [ -d "node-demo-" ]; then
+              echo "Repository cloned successfully."
+            else
+              echo "Repository cloning failed. Directory does not exist."
+              exit 1
+            fi
+
+            # Navigate into the repo directory
+            cd node-demo-
+
+            # Create 3 new folders inside node-demo-
+            mkdir folder1 folder2 folder3
+
+            # Copy all files from node-demo- into each of the three folders
+            find . -maxdepth 1 -type f -exec cp {} folder1/ \;
+            find . -maxdepth 1 -type f -exec cp {} folder2/ \;
+            find . -maxdepth 1 -type f -exec cp {} folder3/ \;
+
+            # Optional: Verify the files in each folder
+            echo "Contents of folder1:"
+            ls -la folder1
+            echo "Contents of folder2:"
+            ls -la folder2
+            echo "Contents of folder3:"
+            ls -la folder3
+
+            # Optional: Run the Node.js app in the background
+            # pkill node || true  # Stop any existing node processes
+            # nohup node index.js > app.log 2>&1 &  # Run the app in the background
