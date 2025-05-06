@@ -1,4 +1,4 @@
-name: Sync test1 to test2
+name: Sync test1 
 
 on:
   push:
