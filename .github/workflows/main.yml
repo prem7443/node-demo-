@@ -15,20 +15,23 @@ jobs:
       - name: Deploy Node.js app to EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.HOST_DNS }}          # Use the correct secret name
-          username: ${{ secrets.USERNAME }}      # Use the correct secret name
-          key: ${{ secrets.EC2_SSH_KEY }}       # Use the correct secret name
+          host: ${{ secrets.HOST_DNS }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            # Add EC2 to known hosts to prevent SSH warning
+            ssh-keyscan -H ${{ secrets.HOST_DNS }} >> ~/.ssh/known_hosts
+
             # Ensure Node.js and npm are installed
             sudo apt-get update
             sudo apt-get install -y nodejs npm git
-            
+
             # Clone the latest repo and install dependencies
             rm -rf node-ec2-demo
             git clone https://github.com/YOUR_USERNAME/node-ec2-demo.git
             cd node-ec2-demo
             npm install
-            
+
             # Run the app in the background
             pkill node || true
             nohup node index.js > app.log 2>&1 &
