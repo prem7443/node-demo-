@@ -1,4 +1,4 @@
-name: Sync test1 
+name: Sync test1 to test2
 
 on:
   push:
@@ -18,7 +18,9 @@ jobs:
 
       - name: Push test1 to test2
         env:
-          TOKEN: ${{ secrets.PAT_TOKEN }}
+          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
-          git remote set-url origin https://x-access-token:${TOKEN}@github.com/${{ github.repository }}
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git remote set-url origin https://x-access-token:${PAT_TOKEN}@github.com/${{ github.repository }}
           git push origin test1:test2 --force
