@@ -1,0 +1,26 @@
+name: Deploy Node App to EC2
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Connect to EC2 and deploy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_KEY }}
+          script: |
+            sudo apt-get update
+            sudo apt-get install -y nodejs npm git
+            rm -rf node-ec2-demo
+            git clone https://github.com/YOUR_USERNAME/node-ec2-demo.git
+            cd node-ec2-demo
+            npm install
+            pkill node || true
+            nohup node index.js > app.log 2>&1 &
