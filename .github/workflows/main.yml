@@ -28,7 +28,7 @@ jobs:
 
             # Clone the latest repo and install dependencies
             rm -rf node-ec2-demo
-            git clone https://github.com/YOUR_USERNAME/node-ec2-demo.git
+            https://github.com/prem7443/node-demo-.git
             cd node-ec2-demo
             npm install
 
