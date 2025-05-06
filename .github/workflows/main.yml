@@ -17,5 +17,8 @@ jobs:
         run: git fetch --all
 
       - name: Push test1 to test2
+        env:
+          TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
+          git remote set-url origin https://x-access-token:${TOKEN}@github.com/${{ github.repository }}
           git push origin test1:test2 --force
