@@ -1,4 +1,4 @@
-name: Deploy Node App to EC2
+name: Deploy to EC2
 
 on:
   push:
@@ -7,24 +7,34 @@ on:
 
 jobs:
   deploy:
+    name: Deploy Node.js App to EC2
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up SSH known hosts
+        run: |
+          # Ensure that the EC2 host is in known hosts to prevent SSH warning
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.HOST_DNS }} >> ~/.ssh/known_hosts
 
       - name: Deploy Node.js app to EC2
         uses: appleboy/ssh-action@v0.1.7
         with:
-          host: ${{ secrets.HOST_DNS }}
-          username: ${{ secrets.USERNAME }}
-          key: ${{ secrets.EC2_SSH_KEY }}
+          host: ${{ secrets.HOST_DNS }}  # Public IP or DNS of your EC2 instance
+          username: ${{ secrets.USERNAME }}  # EC2 SSH username (e.g., ubuntu or ec2-user)
+          key: ${{ secrets.EC2_SSH_KEY }}  # SSH private key (add to GitHub secrets)
+          port: 22  # Default SSH port
           script: |
-            # Add EC2 to known hosts to prevent SSH warning
-            ssh-keyscan -H ${{ secrets.HOST_DNS }} >> ~/.ssh/known_hosts
+            # Enable debugging
+            set -x
 
-            # Update system packages and install Node.js and npm if not installed
+            # Update system packages
             sudo apt-get update
+
+            # Install Node.js, npm, and git
             sudo apt-get install -y nodejs npm git
 
             # Clone the latest repo and install dependencies
