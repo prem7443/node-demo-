@@ -19,7 +19,7 @@ jobs:
             sudo apt-get update
             sudo apt-get install -y nodejs npm git
             rm -rf node-ec2-demo
-            git clone https://github.com/YOUR_USERNAME/node-ec2-demo.git
+            git clone https://github.com/prem7443/node-demo-.git
             cd node-ec2-demo
             npm install
             pkill node || true
