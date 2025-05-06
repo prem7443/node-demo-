@@ -24,10 +24,12 @@ jobs:
       - name: Deploy app on EC2
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.USERNAME }}@${{ secrets.HOST_DNS }} << 'EOF'
-            cd /home/ubuntu/node-demo-/test1
-            git pull origin test1
+            cd /home/ubuntu/node-demo-/test2
+            git fetch origin test1
+            git reset --hard origin/test1
             npm install
             pkill node || true
             nohup npm start > output.log 2>&1 &
           EOF
+
 
