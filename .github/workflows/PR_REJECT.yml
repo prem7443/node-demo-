@@ -8,4 +8,5 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "PR trigger test successful for PR #${{ github.event.pull_request.number }} on event ${{ github.event.action }}"
+      - name: Test echo step
+        run: echo "✅ PR trigger test successful"
