@@ -1,10 +1,11 @@
-name: Test Trigger
+name: Test PR Trigger
 
 on:
-  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize, reopened]
 
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "This is a test workflow to confirm triggering on manual dispatch"
+      - run: echo "PR trigger test successful for PR #${{ github.event.pull_request.number }} on event ${{ github.event.action }}"
