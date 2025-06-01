@@ -1,29 +1,18 @@
 name: Auto-Close Conflicted PRs
-
-# ─────────────────────────────────────────────────────────────
-# 1️⃣  AUTOMATIC TRIGGERS
-# ─────────────────────────────────────────────────────────────
 on:
   pull_request:
-    # fire when the PR is created, new commits are pushed,
-    # or somebody re-opens a previously-closed PR
     types: [opened, synchronize, reopened]
-
-# ─────────────────────────────────────────────────────────────
-# 2️⃣  MINIMUM PERMISSIONS NEEDED
-# ─────────────────────────────────────────────────────────────
+    
 permissions:
-  pull-requests: write   # required by peter-evans/close-pull
-  contents: read         # lets us read the PR’s details
+  pull-requests: write   
+  contents: read        
 
 jobs:
   close_conflicted_pr:
     runs-on: ubuntu-latest
 
     steps:
-      # -----------------------------------------------------------------
-      #  Wait until GitHub has finished computing the PR’s mergeability
-      # -----------------------------------------------------------------
+      
       - name: Wait for mergeability to be known
         id: mergeable
         env:
@@ -52,13 +41,10 @@ jobs:
           echo "::error::Timed out waiting for mergeability"
           exit 1
 
-      # -----------------------------------------------------------------
-      #  Auto-close the PR if it has merge conflicts
-      # -----------------------------------------------------------------
       - name: Close PR because it has conflicts
         if: steps.mergeable.outputs.mergeable == 'false'
         uses: peter-evans/close-pull@v3
         with:
           pull-number: ${{ github.event.pull_request.number }}
           comment: |
-            ❌ This PR has merge conflicts and was automatically closed.
+             This PR has merge conflicts and was automatically closed.
