@@ -4,9 +4,7 @@ name: Auto-Close Conflicted PRs
 # 1️⃣  AUTOMATIC TRIGGERS
 # ─────────────────────────────────────────────────────────────
 on:
-  pull_request:
-    # fire when the PR is created, new commits are pushed,
-    # or somebody re-opens a previously-closed PR
+  pull_request
     types: [opened, synchronize, reopened]
 
 # ─────────────────────────────────────────────────────────────
