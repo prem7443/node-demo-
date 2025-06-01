@@ -1,19 +1,37 @@
 name: Auto-Close Conflicted PRs
+
+# ───────────────────────────────────────────────
+# Triggers
+# ───────────────────────────────────────────────
 on:
+  # Fires automatically for every pull-request event you care about
   pull_request:
     types: [opened, synchronize, reopened]
-    
-permissions:
-  pull-requests: write   
-  contents: read        
 
+  # Lets you run it by hand from the Actions tab
+  workflow_dispatch:
+
+# ───────────────────────────────────────────────
+# Repository-wide permissions required
+# ───────────────────────────────────────────────
+permissions:
+  pull-requests: write   # needed by peter-evans/close-pull
+  contents: read         # minimal read access to repo contents
+
+# ───────────────────────────────────────────────
+# Job
+# ───────────────────────────────────────────────
 jobs:
   close_conflicted_pr:
     runs-on: ubuntu-latest
 
     steps:
-      
-      - name: Wait for mergeability to be known
+      # (Ubuntu-latest already has jq, but install explicitly if you prefer.)
+      # - name: Ensure jq is installed
+      #   run: sudo apt-get update && sudo apt-get install -y jq
+
+      # Wait until GitHub has finished computing the PR’s mergeability
+      - name: Wait until mergeability is known
         id: mergeable
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -24,7 +42,6 @@ jobs:
             echo "Attempt $i – checking mergeability"
             pr_json=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
               "https://api.github.com/repos/$REPO/pulls/$PR_NUMBER")
-
             mergeable=$(echo "$pr_json" | jq -r '.mergeable')
             echo "mergeable=$mergeable"
 
@@ -41,10 +58,11 @@ jobs:
           echo "::error::Timed out waiting for mergeability"
           exit 1
 
+      # Close the PR if GitHub says it has conflicts
       - name: Close PR because it has conflicts
         if: steps.mergeable.outputs.mergeable == 'false'
         uses: peter-evans/close-pull@v3
         with:
           pull-number: ${{ github.event.pull_request.number }}
           comment: |
-             This PR has merge conflicts and was automatically closed.
+            ❌ This PR has merge conflicts and was automatically closed.
