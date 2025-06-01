@@ -1,12 +1,12 @@
-name: Debug PR Trigger
+name: Test PR Trigger
 
 on:
   pull_request:
     types: [opened, synchronize, reopened]
 
 jobs:
-  test:
+  test_trigger:
     runs-on: ubuntu-latest
     steps:
-      - name: Just echo
-        run: echo "Pull request trigger is working!"
+      - name: Confirm PR event
+        run: echo "✅ PR trigger is working!"
