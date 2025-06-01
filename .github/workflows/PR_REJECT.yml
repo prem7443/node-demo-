@@ -1,24 +1,24 @@
 name: Auto-Close Conflicted PRs
 
+# Trigger the workflow automatically on pull request events
 on:
-  workflow_dispatch:
-    inputs:
-      pr_number:
-        description: 'Pull request number to check'
-        required: true
-        type: string
+  pull_request:
+    types: [opened, synchronize, reopened]
 
 permissions:
-  pull-requests: write
+  pull-requests: write  # Required to close pull requests
+  contents: read       # Required to read PR details via API
 
 jobs:
   close_conflicted_pr:
     runs-on: ubuntu-latest
 
     steps:
+      # Checkout repository (optional, but good practice)
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      # Wait for GitHub to determine mergeability
       - name: Wait for GitHub to determine mergeability
         id: wait_mergeable
         run: |
@@ -26,6 +26,10 @@ jobs:
             echo "Checking mergeability... Attempt $i"
             pr_data=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
               https://api.github.com/repos/$REPO/pulls/$PR_NUMBER)
+            if [[ -z "$pr_data" ]]; then
+              echo "::error::Failed to fetch PR details from GitHub API"
+              exit 1
+            fi
             mergeable=$(echo "$pr_data" | jq -r '.mergeable')
             echo "mergeable=$mergeable"
             if [[ "$mergeable" != "null" ]]; then
@@ -35,16 +39,18 @@ jobs:
             sleep 3
           done
           echo "mergeable=null" >> $GITHUB_OUTPUT
+          echo "::error::Timed out waiting for mergeability"
           exit 1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
-          PR_NUMBER: ${{ inputs.pr_number }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
 
+      # Close PR if it has merge conflicts
       - name: Close PR if mergeable is false (has conflicts)
         if: steps.wait_mergeable.outputs.mergeable == 'false'
         uses: peter-evans/close-pull@v3
         with:
-          pull-number: ${{ inputs.pr_number }}
+          pull-number: ${{ github.event.pull_request.number }}
           comment: |
             ❌ This PR has merge conflicts and was automatically closed.
