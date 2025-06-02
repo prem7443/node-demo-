@@ -3,8 +3,8 @@ name: Auto-Close Conflicted PRs
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-  # schedule:
-  #   - cron: '*/1 * * * *'
+  
+
 
 jobs:
   close_conflicted_prs:
