@@ -7,6 +7,7 @@ on:
 
 permissions:
   pull-requests: write
+  contents: read
 
 jobs:
   close_conflicted_pr:
@@ -28,10 +29,10 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 state: 'open',
-                base: 'main', // Change if your base branch is not main
-                per_page: 1,
+                base: 'main', // change if your base branch is not main
                 sort: 'updated',
                 direction: 'desc',
+                per_page: 1
               });
 
               if (prs.length > 0) {
@@ -40,7 +41,7 @@ jobs:
             }
 
             if (!prNumber) {
-              core.setFailed('No open PR found.');
+              core.setFailed('No open pull request found.');
               return;
             }
 
@@ -73,10 +74,15 @@ jobs:
           echo "Mergeable: ${{ steps.wait_mergeable.outputs.mergeable }}"
           echo "PR Number: ${{ steps.wait_mergeable.outputs.pr_number }}"
 
+      - name: Checkout repository (required for close-pull)
+        uses: actions/checkout@v3
+
       - name: Close PR if mergeable is false (has conflicts)
         if: steps.wait_mergeable.outputs.mergeable == 'false'
         uses: peter-evans/close-pull@v3
         with:
-          pull-number: ${{ steps.wait_mergeable.outputs.pr_number }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          pull-request-number: ${{ steps.wait_mergeable.outputs.pr_number }}
           comment: |
             ❌ This PR has merge conflicts and was automatically closed.
