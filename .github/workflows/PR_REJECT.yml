@@ -1,8 +1,10 @@
 name: Auto-Close Conflicted PRs
 
 on:
-  schedule:
-    - cron: '*/1 * * * *' # Runs every 5 minutes
+  pull_request:
+    types: [opened, synchronize, reopened]
+  #schedule:
+    #- cron: '*/1 * * * *' 
   
 
 jobs:
