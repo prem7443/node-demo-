@@ -1,11 +1,34 @@
-name: PR Trigger Test
+name: Close PRs with Merge Conflicts
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types:
+      - synchronize
+      - opened
+      - reopened
 
 jobs:
-  test:
+  check-conflicts:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "PR event triggered!"
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Check for merge conflicts
+        id: check_conflicts
+        run: |
+          git fetch origin ${{ github.event.pull_request.base.ref }}
+          git checkout ${{ github.event.pull_request.base.ref }}
+          git merge --no-commit --no-ff ${{ github.event.pull_request.head.ref }} || echo "conflict" > conflict.txt
+          if [ -f conflict.txt ]; then
+            echo "conflict=true" >> $GITHUB_ENV
+          else
+            echo "conflict=false" >> $GITHUB_ENV
+          fi
+
+      - name: Close PR if conflicts exist
+        if: env.conflict == 'true'
+        run: |
+          gh pr close ${{ github.event.pull_request.number }} --comment "This pull request has merge conflicts and has been automatically closed."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
