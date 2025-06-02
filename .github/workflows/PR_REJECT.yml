@@ -1,12 +1,50 @@
-name: Test PR Trigger
+name: Auto-Close Conflicted PRs
 
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+  
+
 
 jobs:
-  test_trigger:
+  close_conflicted_prs:
     runs-on: ubuntu-latest
     steps:
-      - name: Confirm PR event
-        run: echo "✅ PR trigger is working!"
+      - name: Close PRs with merge conflicts
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prs = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100,
+            });
+
+            for (const pr of prs.data) {
+              const details = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number,
+              });
+
+              // mergeable = null means GitHub is still computing; skip and check next run
+              if (details.data.mergeable === false) {
+                console.log(`Closing PR #${pr.number} due to merge conflict.`);
+                
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr.number,
+                  body: "This pull request has a merge conflict and is being closed automatically.",
+                });
+
+                await github.rest.pulls.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: pr.number,
+                  state: 'closed',
+                });
+              }
+            }
