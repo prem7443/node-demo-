@@ -18,6 +18,7 @@ jobs:
     steps:
       - name: Wait for GitHub to determine mergeability
         id: wait_mergeable
+        shell: bash
         run: |
           echo "Repo: ${{ github.repository }}"
           echo "PR Number: ${{ github.event.pull_request.number }}"
@@ -28,20 +29,20 @@ jobs:
               https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }})
 
             mergeable=$(echo "$pr_data" | jq -r '.mergeable')
-
             echo "mergeable=$mergeable"
             if [[ "$mergeable" != "null" ]]; then
-              echo "mergeable=$mergeable" >> $GITHUB_OUTPUT
+              echo "mergeable=$mergeable" >> "$GITHUB_OUTPUT"
               exit 0
             fi
             sleep 3
           done
 
-          echo "mergeable=null" >> $GITHUB_OUTPUT
+          echo "mergeable=null" >> "$GITHUB_OUTPUT"
           exit 1
 
-      - name: Debug - Show mergeable output
-        run: echo "Mergeable: ${{ steps.wait_mergeable.outputs.mergeable }}"
+      - name: Debug - Show mergeability
+        run: |
+          echo "Mergeable: '${{ steps.wait_mergeable.outputs.mergeable }}'"
 
       - name: Close PR if mergeable is false (has conflicts)
         if: steps.wait_mergeable.outputs.mergeable == 'false'
