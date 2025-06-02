@@ -2,8 +2,11 @@ name: Auto-Close Conflicted PRs
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
-  #workflow_dispatch:
+    types:
+      - opened
+      - synchronize
+      - reopened
+
 
 permissions:
   pull-requests: write
