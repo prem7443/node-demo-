@@ -16,17 +16,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
       - name: Wait for GitHub to determine mergeability
         id: wait_mergeable
         run: |
+          echo "Repo: ${{ github.repository }}"
+          echo "PR Number: ${{ github.event.pull_request.number }}"
+
           for i in {1..10}; do
             echo "Checking mergeability... Attempt $i"
-            pr_data=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
-              https://api.github.com/repos/$REPO/pulls/$PR_NUMBER)
+            pr_data=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }})
+
             mergeable=$(echo "$pr_data" | jq -r '.mergeable')
+
             echo "mergeable=$mergeable"
             if [[ "$mergeable" != "null" ]]; then
               echo "mergeable=$mergeable" >> $GITHUB_OUTPUT
@@ -34,12 +36,12 @@ jobs:
             fi
             sleep 3
           done
+
           echo "mergeable=null" >> $GITHUB_OUTPUT
           exit 1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+
+      - name: Debug - Show mergeable output
+        run: echo "Mergeable: ${{ steps.wait_mergeable.outputs.mergeable }}"
 
       - name: Close PR if mergeable is false (has conflicts)
         if: steps.wait_mergeable.outputs.mergeable == 'false'
@@ -47,4 +49,4 @@ jobs:
         with:
           pull-number: ${{ github.event.pull_request.number }}
           comment: |
-           This PR has merge conflicts and was automatically closed.
+            ❌ This PR has merge conflicts and was automatically closed.
