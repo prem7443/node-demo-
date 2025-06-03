@@ -15,12 +15,17 @@ jobs:
           ref: ${{ github.head_ref }}
           fetch-depth: 0
 
-
       - name: Fetch base branch
         run: |
           git fetch origin ${{ github.event.pull_request.base.ref }}
 
-     
+      - name: Try merge with base
+        id: check_merge
+        run: |
+          set +e
+          git merge --no-commit --no-ff origin/${{ github.event.pull_request.base.ref }}
+          echo "merge_exit_code=$?" >> $GITHUB_OUTPUT
+          set -e
 
       - name: Debug merge exit code
         run: echo "Merge exit code is '${{ steps.check_merge.outputs.merge_exit_code }}'"
@@ -33,4 +38,4 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-     
+      
