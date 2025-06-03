@@ -35,9 +35,10 @@ jobs:
         if: env.merge_exit_code != '0'
         run: |
           echo "Closing PR due to merge conflict..."
-          gh pr close ${{ github.event.pull_request.number }} --reason "not planned"
+          gh pr close ${{ github.event.pull_request.number }} --comment "⚠️ This PR was automatically closed because it has merge conflicts with the base branch."
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 
       - name: Comment on PR
         if: env.merge_exit_code != '0'
