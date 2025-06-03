@@ -35,9 +35,4 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Comment on PR
-        if: steps.check_merge.outputs.merge_exit_code != '0'
-        run: |
-          gh pr comment ${{ github.event.pull_request.number }} --body "This PR has merge conflicts with the base branch and has been closed automatically."
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
