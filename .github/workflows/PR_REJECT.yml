@@ -1,4 +1,4 @@
-name: Auto-Close Conflicted PRs
+name: Auto-Close PRs with Conflicts
 
 on:
   pull_request_target:
@@ -8,39 +8,39 @@ jobs:
   check-conflicts:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout PR code
+      - name: Checkout PR branch
         uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref }}
+          fetch-depth: 0  # Needed to simulate merges
 
-      - name: Fetch base branch
-        run: |
-          git remote set-branches origin '*'
-          git fetch origin ${{ github.event.pull_request.base.ref }}
-
-      - name: Try merge with base branch
-        id: mergecheck
+      - name: Configure Git
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          if git merge --no-commit --no-ff origin/${{ github.event.pull_request.base.ref }}; then
-            echo "mergeable=true" >> $GITHUB_OUTPUT
-          else
-            echo "mergeable=false" >> $GITHUB_OUTPUT
-            git merge --abort
-          fi
-
-      - name: Close PR if conflict exists
-        if: steps.mergecheck.outputs.mergeable == 'false'
+      - name: Fetch base branch
         run: |
-          echo "PR has merge conflicts. Closing..."
+          git fetch origin ${{ github.event.pull_request.base.ref }}
+
+      - name: Try merge with base
+        id: check_merge
+        run: |
+          set +e
+          git merge --no-commit --no-ff origin/${{ github.event.pull_request.base.ref }}
+          echo "merge_exit_code=$?" >> $GITHUB_ENV
+          set -e
+
+      - name: Close PR if merge conflict
+        if: env.merge_exit_code != '0'
+        run: |
+          echo "Closing PR due to merge conflict..."
           gh pr close ${{ github.event.pull_request.number }} --reason "not planned"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Comment about conflict
-        if: steps.mergecheck.outputs.mergeable == 'false'
+      - name: Comment on PR
+        if: env.merge_exit_code != '0'
         run: |
           gh pr comment ${{ github.event.pull_request.number }} --body "⚠️ This PR has merge conflicts with the base branch and has been closed automatically."
         env:
