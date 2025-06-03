@@ -15,6 +15,11 @@ jobs:
           ref: ${{ github.head_ref }}
           fetch-depth: 0
 
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
       - name: Fetch base branch
         run: |
           git fetch origin ${{ github.event.pull_request.base.ref }}
@@ -27,12 +32,20 @@ jobs:
           echo "merge_exit_code=$?" >> $GITHUB_OUTPUT
           set -e
 
+      - name: Debug merge exit code
+        run: echo "Merge exit code is '${{ steps.check_merge.outputs.merge_exit_code }}'"
+
       - name: Close PR if merge conflict
         if: steps.check_merge.outputs.merge_exit_code != '0'
         run: |
           echo "Closing PR due to merge conflict..."
-          gh pr close ${{ github.event.pull_request.number }} --comment "This PR was automatically closed because it has merge conflicts with the base branch."
+          gh pr close ${{ github.event.pull_request.number }} --comment "⚠️ This PR was automatically closed because it has merge conflicts with the base branch."
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      
+      - name: Comment on PR
+        if: steps.check_merge.outputs.merge_exit_code != '0'
+        run: |
+          gh pr comment ${{ github.event.pull_request.number }} --body "⚠️ This PR has merge conflicts with the base branch and has been closed automatically."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
