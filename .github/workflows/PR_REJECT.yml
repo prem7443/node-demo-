@@ -46,13 +46,13 @@ jobs:
         if: steps.check_merge.outputs.merge_exit_code != '0'
         run: |
           echo "Closing PR due to merge conflict..."
-          gh pr close ${{ github.event.pull_request.number }} --comment "⚠️ This PR was automatically closed because it has merge conflicts with the base branch."
+          gh pr close ${{ github.event.pull_request.number }} --comment "This PR was automatically closed because it has merge conflicts with the base branch."
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Comment on PR
         if: steps.check_merge.outputs.merge_exit_code != '0'
         run: |
-          gh pr comment ${{ github.event.pull_request.number }} --body "⚠️ This PR has merge conflicts with the base branch and has been closed automatically."
+          gh pr comment ${{ github.event.pull_request.number }} --body "This PR has merge conflicts with the base branch and has been closed automatically."
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
