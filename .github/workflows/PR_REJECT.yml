@@ -17,6 +17,10 @@ jobs:
 
       - name: Fetch base branch
         run: git fetch origin ${{ github.event.pull_request.base.ref }}
+      - name: Configure Git (local)
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
 
       - name: Check for merge conflicts (dry-run)
         id: check_merge
@@ -28,6 +32,7 @@ jobs:
             echo "merge_exit_code=1" >> $GITHUB_OUTPUT
             git merge --abort
           fi
+
 
       - name: Close and Comment on PR if merge conflict
         if: steps.check_merge.outputs.merge_exit_code != '0'
