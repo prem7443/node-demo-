@@ -1,4 +1,3 @@
-
 name: Auto-Close PRs with Conflicts
 
 on:
@@ -25,19 +24,15 @@ jobs:
         run: |
           git fetch origin ${{ github.event.pull_request.base.ref }}
 
-      - name: Check for merge conflicts using git merge-tree
+      - name: Check for merge conflicts (dry-run)
         id: check_merge
         run: |
-          BASE_SHA=$(git rev-parse origin/${{ github.event.pull_request.base.ref }})
-          HEAD_SHA=$(git rev-parse HEAD)
-          MERGE_BASE=$(git merge-base $BASE_SHA $HEAD_SHA)
-
-          git merge-tree $MERGE_BASE $HEAD_SHA $BASE_SHA > merge_result.txt
-
-          if grep -q '<<<<<<<' merge_result.txt; then
-            echo "merge_exit_code=1" >> $GITHUB_OUTPUT
-          else
+          git checkout -b temp-merge-check
+          if git merge origin/${{ github.event.pull_request.base.ref }} --no-commit --no-ff; then
             echo "merge_exit_code=0" >> $GITHUB_OUTPUT
+          else
+            echo "merge_exit_code=1" >> $GITHUB_OUTPUT
+            git merge --abort
           fi
 
       - name: Debug merge exit code
@@ -47,13 +42,13 @@ jobs:
         if: steps.check_merge.outputs.merge_exit_code != '0'
         run: |
           echo "Closing PR due to merge conflict..."
-          gh pr close ${{ github.event.pull_request.number }} --comment "This PR was automatically closed because it has merge conflicts with the base branch."
+          gh pr close ${{ github.event.pull_request.number }} --comment "⚠️ This PR was automatically closed because it has merge conflicts with the base branch."
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Comment on PR
         if: steps.check_merge.outputs.merge_exit_code != '0'
         run: |
-          gh pr comment ${{ github.event.pull_request.number }} --body "This PR has merge conflicts with the base branch and has been closed automatically."
+          gh pr comment ${{ github.event.pull_request.number }} --body "⚠️ This PR has merge conflicts with the base branch and has been closed automatically."
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
