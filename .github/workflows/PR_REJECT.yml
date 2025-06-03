@@ -1,4 +1,3 @@
-
 name: Auto-Close PRs with Conflicts
 
 on:
@@ -8,12 +7,13 @@ on:
 jobs:
   check-conflicts:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout PR branch
         uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref }}
-          fetch-depth: 0  # Needed to simulate merges
+          fetch-depth: 0
 
       - name: Configure Git
         run: |
@@ -29,20 +29,19 @@ jobs:
         run: |
           set +e
           git merge --no-commit --no-ff origin/${{ github.event.pull_request.base.ref }}
-          echo "merge_exit_code=$?" >> $GITHUB_ENV
+          echo "merge_exit_code=$?" >> $GITHUB_OUTPUT
           set -e
 
       - name: Close PR if merge conflict
-        if: env.merge_exit_code != '0'
+        if: steps.check_merge.outputs.merge_exit_code != '0'
         run: |
           echo "Closing PR due to merge conflict..."
           gh pr close ${{ github.event.pull_request.number }} --comment "⚠️ This PR was automatically closed because it has merge conflicts with the base branch."
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-
       - name: Comment on PR
-        if: env.merge_exit_code != '0'
+        if: steps.check_merge.outputs.merge_exit_code != '0'
         run: |
           gh pr comment ${{ github.event.pull_request.number }} --body "⚠️ This PR has merge conflicts with the base branch and has been closed automatically."
         env:
