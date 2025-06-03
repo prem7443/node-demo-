@@ -4,45 +4,44 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
-permissions:
-  pull-requests: write
-  contents: read
-
 jobs:
-  close_conflicted_pr:
+  check-conflicts:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - name: Checkout PR code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
 
-      - name: Check and close conflicted PR
+      - name: Fetch base branch
         run: |
-          pr=${{ github.event.pull_request.number }}
-          echo "Checking PR #$pr..."
+          git remote set-branches origin '*'
+          git fetch origin ${{ github.event.pull_request.base.ref }}
 
-          for i in {1..10}; do
-            pr_data=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-              https://api.github.com/repos/${{ github.repository }}/pulls/$pr)
-            mergeable=$(echo "$pr_data" | jq -r '.mergeable')
+      - name: Try merge with base branch
+        id: mergecheck
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
 
-            if [[ "$mergeable" != "null" ]]; then
-              break
-            fi
-            echo "Waiting for mergeable to be computed for PR #$pr... attempt $i"
-            sleep 3
-          done
-
-          if [[ "$mergeable" == "false" ]]; then
-            echo "Closing PR #$pr due to merge conflicts..."
-            curl -s -X POST -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-              -H "Content-Type: application/json" \
-              -d '{"body":"❌ This pull request has a merge conflict and was automatically closed."}' \
-              https://api.github.com/repos/${{ github.repository }}/issues/$pr/comments
-
-            curl -s -X PATCH -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-              -H "Content-Type: application/json" \
-              -d '{"state":"closed"}' \
-              https://api.github.com/repos/${{ github.repository }}/pulls/$pr
+          if git merge --no-commit --no-ff origin/${{ github.event.pull_request.base.ref }}; then
+            echo "mergeable=true" >> $GITHUB_OUTPUT
           else
-            echo "PR #$pr is mergeable."
+            echo "mergeable=false" >> $GITHUB_OUTPUT
+            git merge --abort
           fi
+
+      - name: Close PR if conflict exists
+        if: steps.mergecheck.outputs.mergeable == 'false'
+        run: |
+          echo "PR has merge conflicts. Closing..."
+          gh pr close ${{ github.event.pull_request.number }} --reason "not planned"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Comment about conflict
+        if: steps.mergecheck.outputs.mergeable == 'false'
+        run: |
+          gh pr comment ${{ github.event.pull_request.number }} --body "⚠️ This PR has merge conflicts with the base branch and has been closed automatically."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
