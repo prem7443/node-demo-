@@ -15,18 +15,18 @@ jobs:
           ref: ${{ github.head_ref }}
           fetch-depth: 0
 
-      - name: Configure Git (local)
+      - name: Configure Git
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
 
       - name: Fetch base branch
-        run: git fetch origin ${{ github.event.pull_request.base.ref }}
+        run: |
+          git fetch origin ${{ github.event.pull_request.base.ref }}
 
-      - name: Check for merge conflicts (dry-run)
+      - name: Check for merge conflicts
         id: check_merge
         run: |
-          git checkout -b temp-merge-check
           if git merge origin/${{ github.event.pull_request.base.ref }} --no-commit --no-ff; then
             echo "merge_exit_code=0" >> $GITHUB_OUTPUT
           else
@@ -34,11 +34,24 @@ jobs:
             git merge --abort
           fi
 
-      - name: Close and Comment on PR if merge conflict
+      - name: Close PR and comment via REST API
         if: steps.check_merge.outputs.merge_exit_code != '0'
         run: |
-          echo "Closing PR due to merge conflict..."
-          gh pr close ${{ github.event.pull_request.number }} --comment "This PR was automatically closed because it has merge conflicts with the base branch."
-          gh pr comment ${{ github.event.pull_request.number }} --body "This PR has merge conflicts with the base branch and has been closed automatically."
+          echo "❌ Merge conflict detected. Closing PR #${{ github.event.pull_request.number }}."
+
+          # Close the pull request
+          curl -s -X PATCH \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls/${{ github.event.pull_request.number }} \
+            -d '{"state": "closed"}'
+
+          # Add a comment explaining why it was closed
+          curl -s -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/${GITHUB_REPOSITORY}/issues/${{ github.event.pull_request.number }}/comments \
+            -d '{"body": "This PR was automatically closed due to merge conflicts with the base branch. Please resolve conflicts and open a new PR."}'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
