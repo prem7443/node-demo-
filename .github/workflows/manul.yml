@@ -6,100 +6,32 @@ on:
       environment:
         description: "Select deployment environment"
         required: true
-        default: non-main
         type: choice
+        default: production
         options:
-          - main
-          - non-main
+          - production
+          - non-production
 
 jobs:
   deploy:
     runs-on: ptk-phprunner
 
-    # 🔐 Manual approval happens here (only if environment = main)
-    environment: ${{ github.event.inputs.environment }}
-
-    defaults:
-      run:
-        shell: bash -euo pipefail {0}
+    # 🔐 Manual approval if production (via GitHub Environments)
+    environment:
+      name: ${{ github.event.inputs.environment }}
 
     steps:
-      # 1️⃣ Show selected inputs
-      - name: 🧾 Show selected options
+      - name: 🧾 Validate branch for production
+        if: ${{ github.event.inputs.environment == 'production' && github.ref_name != 'main' }}
+        run: |
+          echo "❌ Production deployment is allowed only from main branch"
+          exit 1
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy
         run: |
           echo "Environment : ${{ github.event.inputs.environment }}"
           echo "Branch      : ${{ github.ref_name }}"
-
-      # 2️⃣ Resolve deployment path
-      - name: 📦 Resolve deployment path
-        id: vars
-        run: |
-          echo "::group::Resolve path"
-
-          if [[ "${{ github.event.inputs.environment }}" == "main" ]]; then
-            if [[ "${{ github.ref_name }}" != "main" ]]; then
-              echo "::error title=InvalidBranch::main deploy allowed only from main branch"
-              exit 1
-            fi
-            host="${{ secrets.PROD_SSH_HOST }}"
-            user="${{ secrets.PROD_CPUSER }}"
-            path="${{ vars.PROD_PATH }}"
-          else
-            case "${{ github.ref_name }}" in
-              Release*)
-                path="${{ vars.ALPHA_PATH }}" ;;
-              Hotfix)
-                path="${{ vars.BETA_PATH }}" ;;
-              DevRelease*)
-                path="${{ vars.DEV_PATH }}" ;;
-              gamma)
-                path="${{ vars.GAMMA_PATH }}" ;;
-              *)
-                echo "::error title=InvalidBranch::Unsupported branch for non-main"
-                exit 1 ;;
-            esac
-            host="${{ secrets.NON_PROD_SSH_HOST }}"
-            user="${{ secrets.NON_PROD_CPUSER }}"
-          fi
-
-          echo "host=$host" >> "$GITHUB_OUTPUT"
-          echo "user=$user" >> "$GITHUB_OUTPUT"
-          echo "path=$path" >> "$GITHUB_OUTPUT"
-
-          echo "Remote path : $path"
-          echo "::endgroup::"
-
-      # 3️⃣ SSH connectivity check
-      - name: 🕵🏻‍♀️ Check SSH connectivity
-        run: |
-          ssh -o BatchMode=yes -o ConnectTimeout=10 \
-            "${{ steps.vars.outputs.user }}@${{ steps.vars.outputs.host }}" \
-            "echo SSH-OK"
-
-      # 4️⃣ Validate directory
-      - name: 📂 Validate remote directory
-        run: |
-          ssh -T -q "${{ steps.vars.outputs.user }}@${{ steps.vars.outputs.host }}" \
-            "[ -d '${{ steps.vars.outputs.path }}' ]"
-
-      # 5️⃣ Deploy
-      - name: 🚚 Deploy code
-        run: |
-          ssh -T -q "${{ steps.vars.outputs.user }}@${{ steps.vars.outputs.host }}" <<EOSSH
-            set -euo pipefail
-            cd "${{ steps.vars.outputs.path }}"
-
-            git reset --hard
-            git fetch origin
-            git checkout "${{ github.ref_name }}"
-            git pull origin "${{ github.ref_name }}"
-          EOSSH
-
-      # 6️⃣ Summary
-      - name: ✅ Success
-        if: success()
-        run: echo "::notice title=DeploySuccess::Deployment completed successfully 🎉"
-
-      - name: ❌ Failure
-        if: failure()
-        run: echo "::error title=DeployFailed::Deployment failed. Check logs."
+          echo "Deploying code..."
