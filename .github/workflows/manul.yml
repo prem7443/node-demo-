@@ -14,7 +14,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: ptk-phprunner
+    runs-on: ubuntu-latest
 
     # 🔐 Manual approval if production (via GitHub Environments)
     environment:
